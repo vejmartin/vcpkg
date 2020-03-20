@@ -9,6 +9,8 @@
 ##     URL <https://android.googlesource.com/platform/external/fdlibm>
 ##     REF <59f7335e4d...>
 ##     [PATCHES <patch1.patch> <patch2.patch>...]
+##     [TARGET_DIRECTORY </path/to/dir>]
+##     [NAME <name>]
 ## )
 ## ```
 ##
@@ -29,6 +31,12 @@
 ##
 ## Relative paths are based on the port directory.
 ##
+## ### TARGET_DIRECTORY
+## The directory to extract the repository in. Defaults to `${CURRENT_BUILDTREES_DIR}/src`.
+##
+## ### NAME
+## The name of the git repository. Defaults to the port name.
+##
 ## ## Notes:
 ## `OUT_SOURCE_PATH`, `REF`, and `URL` must be specified.
 ##
@@ -37,7 +45,7 @@
 ## * [fdlibm](https://github.com/Microsoft/vcpkg/blob/master/ports/fdlibm/portfile.cmake)
 
 function(vcpkg_from_git)
-  set(oneValueArgs OUT_SOURCE_PATH URL REF)
+  set(oneValueArgs OUT_SOURCE_PATH URL REF TARGET_DIRECTORY NAME)
   set(multipleValuesArgs PATCHES)
   cmake_parse_arguments(_vdud "" "${oneValueArgs}" "${multipleValuesArgs}" ${ARGN})
 
@@ -60,11 +68,23 @@ function(vcpkg_from_git)
     message(FATAL_ERROR "The git ref must be specified.")
   endif()
 
+  if(NOT DEFINED _vdud_TARGET_DIRECTORY)
+    set(_vdud_TARGET_DIRECTORY "${CURRENT_BUILDTREES_DIR}/src")
+  endif()
+
+  if(DEFINED _vdud_NAME)
+    set(LOGNAME ${_vdud_NAME})
+    set(NAME ${_vdud_NAME})
+  else()
+    set(LOGNAME "${TARGET_TRIPLET}")
+    set(NAME ${PORT})
+  endif()
+
   # using .tar.gz instead of .zip because the hash of the latter is affected by timezone.
   string(REPLACE "/" "-" SANITIZED_REF "${_vdud_REF}")
-  set(TEMP_ARCHIVE "${DOWNLOADS}/temp/${PORT}-${SANITIZED_REF}.tar.gz")
-  set(ARCHIVE "${DOWNLOADS}/${PORT}-${SANITIZED_REF}.tar.gz")
-  set(TEMP_SOURCE_PATH "${CURRENT_BUILDTREES_DIR}/src/${SANITIZED_REF}")
+  set(TEMP_ARCHIVE "${DOWNLOADS}/temp/${NAME}-${SANITIZED_REF}.tar.gz")
+  set(ARCHIVE "${DOWNLOADS}/${NAME}-${SANITIZED_REF}.tar.gz")
+  set(TEMP_SOURCE_PATH "${_vdud_TARGET_DIRECTORY}/${SANITIZED_REF}")
 
   if(NOT EXISTS "${ARCHIVE}")
     if(_VCPKG_NO_DOWNLOADS)
@@ -77,13 +97,13 @@ function(vcpkg_from_git)
       ALLOW_IN_DOWNLOAD_MODE
       COMMAND ${GIT} init git-tmp
       WORKING_DIRECTORY ${DOWNLOADS}
-      LOGNAME git-init-${TARGET_TRIPLET}
+      LOGNAME git-init-${LOGNAME}
     )
     vcpkg_execute_required_process(
       ALLOW_IN_DOWNLOAD_MODE
       COMMAND ${GIT} fetch ${_vdud_URL} ${_vdud_REF} --depth 1 -n
       WORKING_DIRECTORY ${DOWNLOADS}/git-tmp
-      LOGNAME git-fetch-${TARGET_TRIPLET}
+      LOGNAME git-fetch-${LOGNAME}
     )
     _execute_process(
       COMMAND ${GIT} rev-parse FETCH_HEAD
@@ -105,7 +125,7 @@ function(vcpkg_from_git)
       ALLOW_IN_DOWNLOAD_MODE
       COMMAND ${GIT} archive FETCH_HEAD -o "${TEMP_ARCHIVE}"
       WORKING_DIRECTORY ${DOWNLOADS}/git-tmp
-      LOGNAME git-archive
+      LOGNAME git-archive-${LOGNAME}
     )
 
     get_filename_component(downloaded_file_dir "${ARCHIVE}" DIRECTORY)
@@ -120,6 +140,7 @@ function(vcpkg_from_git)
     ARCHIVE "${ARCHIVE}"
     REF "${SANITIZED_REF}"
     PATCHES ${_vdud_PATCHES}
+    WORKING_DIRECTORY "${_vdud_TARGET_DIRECTORY}"
     NO_REMOVE_ONE_LEVEL
   )
 
