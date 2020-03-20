@@ -9,6 +9,8 @@ vcpkg_from_git(
     URL <https://android.googlesource.com/platform/external/fdlibm>
     REF <59f7335e4d...>
     [PATCHES <patch1.patch> <patch2.patch>...]
+    [TARGET_DIRECTORY </path/to/dir>]
+    [NAME <name>]
 )
 ```
 
@@ -28,6 +30,12 @@ The git sha of the commit to download.
 A list of patches to be applied to the extracted sources.
 
 Relative paths are based on the port directory.
+
+### TARGET_DIRECTORY
+The directory to extract the repository in.
+
+### NAME
+The name of the git repository. Defaults to the port name.
 
 ## Notes:
 `OUT_SOURCE_PATH`, `REF`, and `URL` must be specified.
