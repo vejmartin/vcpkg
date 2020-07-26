@@ -1,6 +1,6 @@
 vcpkg_fail_port_install(
     ON_ARCH "x86" "arm" "arm64"
-    ON_TARGET "UWP" "LINUX")
+    ON_TARGET "UWP")
 
 # Patches may be provided at the end
 function(checkout_in_path PATH URL REF)
@@ -51,6 +51,15 @@ checkout_in_path(
     "${CHROMIUM_GIT}/third_party/modp_b64" 
     "509f005fa65e652dc4a6f636da6fa1002b6dce16")
 
+if(VCPKG_CMAKE_SYSTEM_NAME STREQUAL Linux)
+    vcpkg_download_distfile(ARCHIVE
+        URLS "https://commondatastorage.googleapis.com/chrome-linux-sysroot/toolchain/d6879d611f3dcf3da8dd92e080029394aa30bc42/debian_sid_amd64_sysroot.tar.xz"
+        FILENAME "debian_sid_amd64_sysroot.tar.xz"
+        SHA512 4dbf9d0a16a43d6db80a87a8acf9afa9438e413eb3ac09f3fda0d79624af1ec50701bc2437215e09932170d029cb7e87a283d08b3cdd689182012c47af16defe)
+        
+    vcpkg_extract_source_archive(${ARCHIVE} "${SOURCE_PATH}/build/linux/debian_sid_amd64-sysroot")
+endif()
+
 set(RES "${CMAKE_CURRENT_LIST_DIR}/res")
 file(COPY "${RES}/.gn" DESTINATION "${SOURCE_PATH}")
 file(COPY "${RES}/BUILD.gn" DESTINATION "${SOURCE_PATH}")
@@ -62,6 +71,8 @@ file(COPY "${RES}/LASTCHANGE.committime" DESTINATION "${SOURCE_PATH}/build/util"
 file(COPY "${RES}/icu" DESTINATION "${SOURCE_PATH}/third_party")
 file(COPY "${RES}/libxml" DESTINATION "${SOURCE_PATH}/third_party")
 file(COPY "${RES}/protobuf" DESTINATION "${SOURCE_PATH}/third_party")
+file(COPY "${RES}/fontconfig" DESTINATION "${SOURCE_PATH}/third_party")
+file(COPY "${RES}/test_fonts" DESTINATION "${SOURCE_PATH}/third_party")
 
 set(OPTIONS "\
     use_custom_libcxx=false \
@@ -75,6 +86,10 @@ if(WIN32)
     SET(VCPKG_POLICY_SKIP_ARCHITECTURE_CHECK enabled)
     set(ENV{DEPOT_TOOLS_WIN_TOOLCHAIN} 0)
     set(OPTIONS "${OPTIONS} treat_warnings_as_errors=false use_lld=false")
+endif()
+
+if(VCPKG_CMAKE_SYSTEM_NAME STREQUAL Linux)
+    set(OPTIONS "${OPTIONS} use_allocator=\"none\"")
 endif()
 
 # Find the directory that contains "bin/clang"
@@ -102,8 +117,8 @@ if(APPLE)
     set(OPTIONS "${OPTIONS} enable_dsyms=true")
 endif()
 
-set(OPTIONS_DBG "${OPTIONS} is_debug=true")
-set(OPTIONS_REL "${OPTIONS} is_debug=false")
+set(OPTIONS_DBG "${OPTIONS} is_debug=true symbol_level=2")
+set(OPTIONS_REL "${OPTIONS} is_debug=false symbol_level=0")
 set(DEFINITIONS_DBG ${DEFINITIONS})
 set(DEFINITIONS_REL ${DEFINITIONS})
 
