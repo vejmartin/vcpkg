@@ -51,15 +51,6 @@ checkout_in_path(
     "${CHROMIUM_GIT}/third_party/modp_b64" 
     "509f005fa65e652dc4a6f636da6fa1002b6dce16")
 
-if(VCPKG_CMAKE_SYSTEM_NAME STREQUAL Linux)
-    vcpkg_download_distfile(ARCHIVE
-        URLS "https://commondatastorage.googleapis.com/chrome-linux-sysroot/toolchain/d6879d611f3dcf3da8dd92e080029394aa30bc42/debian_sid_amd64_sysroot.tar.xz"
-        FILENAME "debian_sid_amd64_sysroot.tar.xz"
-        SHA512 4dbf9d0a16a43d6db80a87a8acf9afa9438e413eb3ac09f3fda0d79624af1ec50701bc2437215e09932170d029cb7e87a283d08b3cdd689182012c47af16defe)
-        
-    vcpkg_extract_source_archive(${ARCHIVE} "${SOURCE_PATH}/build/linux/debian_sid_amd64-sysroot")
-endif()
-
 set(RES "${CMAKE_CURRENT_LIST_DIR}/res")
 file(COPY "${RES}/.gn" DESTINATION "${SOURCE_PATH}")
 file(COPY "${RES}/BUILD.gn" DESTINATION "${SOURCE_PATH}")
@@ -89,7 +80,7 @@ if(WIN32)
 endif()
 
 if(VCPKG_CMAKE_SYSTEM_NAME STREQUAL Linux)
-    set(OPTIONS "${OPTIONS} use_allocator=\"none\"")
+    set(OPTIONS "${OPTIONS} use_allocator=\"none\" use_sysroot=false use_glib=false")
 endif()
 
 # Find the directory that contains "bin/clang"
