@@ -72,6 +72,7 @@ function(generate_native_file) #https://mesonbuild.com/Native-environments.html
         list(TRANSFORM WIN_CXX_STANDARD_LIBRARIES PREPEND "'")
         list(JOIN WIN_CXX_STANDARD_LIBRARIES ", " WIN_CXX_STANDARD_LIBRARIES)
         string(APPEND NATIVE "cpp_winlibs = [${WIN_CXX_STANDARD_LIBRARIES}]\n")
+        string(APPEND NATIVE "b_vscrt = 'none'\n")
     endif()
 
     set(_file "${CURRENT_BUILDTREES_DIR}/meson-nativ-${TARGET_TRIPLET}.log")
@@ -203,6 +204,40 @@ function(generate_cross_file) #https://mesonbuild.com/Cross-compilation.html
     endif()
 endfunction()
 
+function(generate_cross_file_config _config) #https://mesonbuild.com/Native-environments.html
+    
+    set(NATIVE_${_config} "[properties]\n") #https://mesonbuild.com/Builtin-options.html
+    string(REGEX REPLACE "( |^)(-|/)" ";\\2" MESON_CFLAGS_${_config} "${VCPKG_DETECTED_COMBINED_CFLAGS_${_config}}")
+    list(TRANSFORM MESON_CFLAGS_${_config} APPEND "'")
+    list(TRANSFORM MESON_CFLAGS_${_config} PREPEND "'")
+    list(JOIN MESON_CFLAGS_${_config} ", " MESON_CFLAGS_${_config})
+    string(REPLACE "'', " "" MESON_CFLAGS_${_config} "${MESON_CFLAGS_${_config}}")
+    string(APPEND NATIVE_${_config} "c_args = [${MESON_CFLAGS_${_config}}]\n")
+    string(REGEX REPLACE "( |^)(-|/)" ";\\2" MESON_CXXFLAGS_${_config} "${VCPKG_DETECTED_COMBINED_CXXFLAGS_${_config}}")
+    list(TRANSFORM MESON_CXXFLAGS_${_config} APPEND "'")
+    list(TRANSFORM MESON_CXXFLAGS_${_config} PREPEND "'")
+    list(JOIN MESON_CXXFLAGS_${_config} ", " MESON_CXXFLAGS_${_config})
+    string(REPLACE "'', " "" MESON_CXXFLAGS_${_config} "${MESON_CXXFLAGS_${_config}}")
+    string(APPEND NATIVE_${_config} "cpp_args = [${MESON_CXXFLAGS_${_config}}]\n")
+
+    if(VCPKG_LIBRARY_LINKAGE STREQUAL "dynamic")
+        set(LINKER_FLAGS_${_config} "${VCPKG_DETECTED_COMBINED_SHARED_LINKERFLAGS_${_config}}")
+    else()
+        set(LINKER_FLAGS_${_config} "${VCPKG_DETECTED_COMBINED_STATIC_LINKERFLAGS_${_config}}")
+    endif()
+    string(REGEX REPLACE "( |^)(-|/)" ";\\2" LINKER_FLAGS_${_config} "${LINKER_FLAGS_${_config}}")
+    list(TRANSFORM LINKER_FLAGS_${_config} APPEND "'")
+    list(TRANSFORM LINKER_FLAGS_${_config} PREPEND "'")
+    list(JOIN LINKER_FLAGS_${_config} ", " LINKER_FLAGS_${_config})
+    string(REPLACE "'', " "" LINKER_FLAGS_${_config} "${LINKER_FLAGS_${_config}}")
+    string(APPEND NATIVE_${_config} "c_linker_args = [${LINKER_FLAGS_${_config}}]\n")
+    string(APPEND NATIVE_${_config} "cpp_linker_args = [${LINKER_FLAGS_${_config}}]\n")
+
+    string(TOLOWER "${_config}" lowerconfig)
+    set(_file "${CURRENT_BUILDTREES_DIR}/meson-cross-${TARGET_TRIPLET}-${lowerconfig}.log")
+    set(VCPKG_MESON_CROSS_FILE_${_config} "${_file}" PARENT_SCOPE)
+    file(WRITE "${_file}" "${NATIVE_${_config}}")
+endfunction()
 
 
 function(vcpkg_configure_meson)
@@ -216,7 +251,7 @@ function(vcpkg_configure_meson)
     debug_message("Including cmake vars from: ${CMAKE_VARS_FILE}")
     include("${CMAKE_VARS_FILE}")
 
-    list(APPEND _vcm_OPTIONS --buildtype plain --backend ninja --wrap-mode nodownload)
+    list(APPEND _vcm_OPTIONS --buildtype custom --backend ninja --wrap-mode nodownload)
 
     if(NOT VCPKG_MESON_NATIVE_FILE)
         generate_native_file()
@@ -234,9 +269,16 @@ function(vcpkg_configure_meson)
     if(NOT VCPKG_MESON_CROSS_FILE)
         generate_cross_file()
     endif()
+    if(NOT VCPKG_MESON_CROSS_FILE_DEBUG)
+        generate_cross_file_config(DEBUG)
+    endif()
+    if(NOT VCPKG_MESON_CROSS_FILE_RELEASE)
+        generate_cross_file_config(RELEASE)
+    endif()
     if(VCPKG_MESON_CROSS_FILE)
         list(APPEND _vcm_OPTIONS --cross "${VCPKG_MESON_CROSS_FILE}")
     endif()
+    
     if(VCPKG_MESON_CROSS_FILE_DEBUG)
         list(APPEND _vcm_OPTIONS_DEBUG --cross "${VCPKG_MESON_CROSS_FILE_DEBUG}")
     endif()
@@ -290,7 +332,7 @@ function(vcpkg_configure_meson)
         set(PATH_SUFFIX_${BUILDNAME} "")
         set(SUFFIX_${BUILDNAME} "rel")
     endif()
-    
+
     # configure build
     foreach(buildtype IN LISTS buildtypes)
         message(STATUS "Configuring ${TARGET_TRIPLET}-${SUFFIX_${buildtype}}")
@@ -310,7 +352,7 @@ function(vcpkg_configure_meson)
             WORKING_DIRECTORY ${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-${SUFFIX_${buildtype}}
             LOGNAME config-${TARGET_TRIPLET}-${SUFFIX_${buildtype}}
         )
-        
+
         #Copy meson log files into buildtree for CI
         if(EXISTS "${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-${SUFFIX_${buildtype}}/meson-logs/meson-log.txt")
             file(COPY "${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-${SUFFIX_${buildtype}}/meson-logs/meson-log.txt" DESTINATION "${CURRENT_BUILDTREES_DIR}")
@@ -321,7 +363,7 @@ function(vcpkg_configure_meson)
             file(RENAME "${CURRENT_BUILDTREES_DIR}/install-log.txt" "${CURRENT_BUILDTREES_DIR}/install-log-${SUFFIX_${buildtype}}.txt")
         endif()
         message(STATUS "Configuring ${TARGET_TRIPLET}-${SUFFIX_${buildtype}} done")
-        
+
         #Restore PKG_CONFIG_PATH
         if(BACKUP_ENV_PKG_CONFIG_PATH_${buildtype})
             set(ENV{PKG_CONFIG_PATH} "${BACKUP_ENV_PKG_CONFIG_PATH_${buildtype}}")
