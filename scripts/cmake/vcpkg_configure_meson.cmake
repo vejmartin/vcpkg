@@ -377,6 +377,10 @@ function(vcpkg_configure_meson)
         list(APPEND _vcm_OPTIONS_RELEASE "-Dcmake_prefix_path=['${CURRENT_INSTALLED_DIR}','${CURRENT_INSTALLED_DIR}/debug']")
     endif()
 
+    vcpkg_find_acquire_program(PYTHON3)
+    get_filename_component(PYTHON3_DIR "${PYTHON3}" DIRECTORY)
+    vcpkg_add_to_path("${PYTHON3_DIR}")
+
     vcpkg_find_acquire_program(MESON)
 
     get_filename_component(CMAKE_PATH ${CMAKE_COMMAND} DIRECTORY)
