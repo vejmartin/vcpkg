@@ -16,19 +16,30 @@ function(vcpkg_install_meson)
     unset(ENV{DESTDIR}) # installation directory was already specified with '--prefix' option
 
     message(STATUS "Package ${TARGET_TRIPLET}-rel")
+    add_to_env(LIB "${CURRENT_INSTALLED_DIR}/lib/")
+    add_to_env(LIBPATH "${CURRENT_INSTALLED_DIR}/lib/")
+    add_to_env(LIBRARY_PATH "{CURRENT_INSTALLED_DIR}/lib/")
     vcpkg_execute_required_process(
         COMMAND ${NINJA} install -v
         WORKING_DIRECTORY ${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-rel
         LOGNAME package-${TARGET_TRIPLET}-rel
     )
-
+    restore_env(LIB)
+    restore_env(LIBPATH)
+    restore_env(LIBRARY_PATH)
+    add_to_env(LIB "${CURRENT_INSTALLED_DIR}/debug/lib/")
+    add_to_env(LIBPATH "${CURRENT_INSTALLED_DIR}/debug/lib/")
+    add_to_env(LIBRARY_PATH "{CURRENT_INSTALLED_DIR}/debug/lib/")
     message(STATUS "Package ${TARGET_TRIPLET}-dbg")
     vcpkg_execute_required_process(
         COMMAND ${NINJA} install -v
         WORKING_DIRECTORY ${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-dbg
         LOGNAME package-${TARGET_TRIPLET}-dbg
     )
-    
+    restore_env(LIB)
+    restore_env(LIBPATH)
+    restore_env(LIBRARY_PATH)
+
     if(VCPKG_TARGET_IS_WINDOWS AND VCPKG_LIBRARY_LINKAGE STREQUAL static)
         # Meson names all static libraries lib<name>.a which basically breaks the world
         file(GLOB_RECURSE LIBRARIES "${CURRENT_PACKAGES_DIR}*/**/lib*.a")
