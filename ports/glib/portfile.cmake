@@ -29,10 +29,13 @@ if (selinux IN_LIST FEATURES AND NOT VCPKG_TARGET_IS_WINDOWS AND NOT EXISTS "/us
     list(APPEND OPTIONS -Dselinux=true)
 endif()
 
+if(VCPKG_TARGET_IS_WINDOWS)
+    list(APPEND OPTIONS -Diconv=external)
+endif()
+
 vcpkg_configure_meson(
     SOURCE_PATH ${SOURCE_PATH}
     OPTIONS
-        -Diconv=external
         -Dbuild_tests=false
         ${OPTIONS}
         
@@ -51,6 +54,9 @@ set(GLIB_TOOLS  gdbus
                 gresource
                 gsettings
                 )
+if(NOT VCPKG_TARGET_IS_WINDOWS)
+    list(APPEND GLIB_TOOLS gapplication glib-gettextize gtester)
+endif()
 set(GLIB_SCRIPTS gdbus-codegen glib-genmarshal glib-mkenums gtester-report)
 
 
@@ -69,17 +75,21 @@ endforeach()
 
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/share")
-
+if(VCPKG_LIBRARY_LINKAGE STREQUAL "static")
+        file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/bin" "${CURRENT_PACKAGES_DIR}/debug/bin")
+    endif()
+    
 IF(VCPKG_TARGET_IS_WINDOWS)
     set(SYSTEM_LIBRARIES dnsapi iphlpapi winmm lshlwapi)
 else()
+    set(SYSTEM_LIBRARIES resolv mount blkid selinux)
 endif()
 if(EXISTS "${CURRENT_PACKAGES_DIR}/lib/pkgconfig/gio-2.0.pc")
-    vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/lib/pkgconfig/gio-2.0.pc" "\${bindir}" "\${bindir}/../tools/${port}")
+    vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/lib/pkgconfig/gio-2.0.pc" "\${bindir}" "\${bindir}/../tools/${PORT}")
 endif()
 if(EXISTS "${CURRENT_PACKAGES_DIR}/debug/lib/pkgconfig/gio-2.0.pc")
-    vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/debug/lib/pkgconfig/gio-2.0.pc" "\${bindir}" "\${bindir}/../../tools/${port}")
+    vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/debug/lib/pkgconfig/gio-2.0.pc" "\${bindir}" "\${bindir}/../../tools/${PORT}")
 endif()
-vcpkg_fixup_pkgconfig(SYSTEM_LIBRARIES ${SYSTEM_LIBRARIES})
+vcpkg_fixup_pkgconfig(NOT_STATIC_PKGCONFIG SYSTEM_LIBRARIES ${SYSTEM_LIBRARIES} IGNORE_FLAGS "-Wl,--export-dynamic")
 
 file(INSTALL ${SOURCE_PATH}/COPYING DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
