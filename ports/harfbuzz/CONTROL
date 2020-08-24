@@ -1,18 +1,40 @@
 Source: harfbuzz
 Version: 2.6.6
-Port-Version: 2
+Port-Version: 3
 Description: HarfBuzz OpenType text shaping engine
 Homepage: https://github.com/behdad/harfbuzz
-Build-Depends: freetype[core], ragel, gettext (osx)
+Default-Features: freetype
+Build-Depends: ragel, gettext (osx)
 
 Feature: graphite2
-Build-Depends: graphite2
+Build-Depends: graphite2[core]
 Description: Graphite2 shaper support
 
 Feature: icu
-Build-Depends: icu
+Build-Depends: icu[core]
 Description: icu support for harfbuzz
 
 Feature: glib
-Build-Depends: glib
+Build-Depends: glib[core]
 Description: Glib Unicode callbacks support
+
+Feature: cairo
+Build-Depends: cairo[core]
+Description: Use Cairo graphics library
+
+Feature: fontconfig
+Build-Depends: fontconfig[core]
+Description: Use fontconfig
+
+Feature: freetype
+Build-Depends: freetype[core]
+Description: Enable freetype interop helpers
+
+Feature: gdi
+Description: Enable GDI helpers and Uniscribe shaper backend (Windows only)
+
+Feature: directwrite
+Description: Enable DirectWrite shaper backend on Windows (experimental)
+
+Feature: coretext
+Description: Enable CoreText shaper backend on macOS

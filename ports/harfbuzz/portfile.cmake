@@ -1,61 +1,88 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO harfbuzz/harfbuzz
-    REF 2.6.6
-    SHA512 3ddf3e6eccf28ca1441544f0b67e243c6a85a32122bfc0f8092b3cc465b20a25aa3cb72404070d2627b9e204f86412c3bfb9aaca272c5492d8448facc1971a7d
+    REF 05ef75c55340400d4b318bd24d742653bbf825d9
+    SHA512 f238ad07600f0763103374e26fb5f9237658cc47b0ef81decd605fd82cd1892d100c2e8936a82740ca857163a3344247114701c1ee21c9dd9c6daae1e03bf6c2
     HEAD_REF master
     PATCHES
-        0001-fix-cmake-export.patch
-        0002-fix-uwp-build.patch
-        0003-remove-broken-test.patch
+        #0001-fix-cmake-export.patch
+        #0002-fix-uwp-build.patch
+        #0003-remove-broken-test.patch
         # This patch is required for propagating the full list of static dependencies from freetype
-        find-package-freetype-2.patch
+        #find-package-freetype-2.patch
         # This patch is required for propagating the full list of dependencies from glib
-        glib-cmake.patch
-        fix_include.patch
+        #glib-cmake.patch
+        #fix_include.patch
 )
 
-file(READ ${SOURCE_PATH}/CMakeLists.txt _contents)
-
-if("${_contents}" MATCHES "include \\(FindFreetype\\)")
-    message(FATAL_ERROR "Harfbuzz's cmake must not directly include() FindFreetype.")
+set(OPTIONS)
+if("glib" IN_LIST FEATURES)
+    list(APPEND OPTIONS "-Dglib=enabled")
+    list(APPEND OPTIONS "-Dgobject=disabled")
+else()
+    list(APPEND OPTIONS "-Dglib=enabled")
+    list(APPEND OPTIONS "-Dgobject=disabled")
 endif()
-
-if("${_contents}" MATCHES "find_library\\(GLIB_LIBRARIES")
-    message(FATAL_ERROR "Harfbuzz's cmake must not directly find_library() glib.")
+if("cairo" IN_LIST FEATURES)
+    list(APPEND OPTIONS "-Dcairo=enabled")
+else()
+    list(APPEND OPTIONS "-Dcairo=disabled")
 endif()
-
-vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
-    icu         HB_HAVE_ICU
-    graphite2   HB_HAVE_GRAPHITE2
-    glib        HB_HAVE_GLIB
-)
-
-vcpkg_configure_cmake(
+if("icu" IN_LIST FEATURES)
+    list(APPEND OPTIONS "-Dicu=enabled")
+else()
+    list(APPEND OPTIONS "-Dicu=disabled")
+endif()
+if("graphite" IN_LIST FEATURES)
+    list(APPEND OPTIONS "-Dgraphite=enabled")
+else()
+    list(APPEND OPTIONS "-Dgraphite=disabled")
+endif()
+if("fontconfig" IN_LIST FEATURES)
+    list(APPEND OPTIONS "-Dfontconfig=enabled")
+else()
+    list(APPEND OPTIONS "-Dfontconfig=disabled")
+endif()
+if("freetype" IN_LIST FEATURES)
+    list(APPEND OPTIONS "-Dfreetype=enabled")
+else()
+    list(APPEND OPTIONS "-Dfreetype=disabled")
+endif()
+if("gdi" IN_LIST FEATURES)
+    if(NOT VCPKG_TARGET_IS_WINDOWS)
+        message(FATAL_ERROR "Featue GDI is only supported on Windows!")
+    endif()
+    list(APPEND OPTIONS "-Dgdi=enabled")
+else()
+    list(APPEND OPTIONS "-Dgdi=disabled")
+endif()
+if("directwrite" IN_LIST FEATURES)
+    if(NOT VCPKG_TARGET_IS_WINDOWS)
+        message(FATAL_ERROR "Featue directwrite is only supported on Windows!")
+    endif()
+    list(APPEND OPTIONS "-Ddirectwrite=enabled")
+else()
+    list(APPEND OPTIONS "-Ddirectwrite=disabled")
+endif()
+if("coretext" IN_LIST FEATURES)
+    if(NOT VCPKG_TARGET_IS_OSX)
+        message(FATAL_ERROR "Featue coretext is only supported on Windows!")
+    endif()
+    list(APPEND OPTIONS "-Dcoretext=enabled")
+else()
+    list(APPEND OPTIONS "-Dcoretext=disabled")
+endif()
+vcpkg_configure_meson(
     SOURCE_PATH ${SOURCE_PATH}
-    PREFER_NINJA
-    OPTIONS ${FEATURE_OPTIONS}
-        -DHB_HAVE_FREETYPE=ON
-        -DHB_BUILD_TESTS=OFF
-    OPTIONS_DEBUG
-        -DSKIP_INSTALL_HEADERS=ON
+    OPTIONS ${OPTIONS}
+        "-Dtests=disabled"
 )
 
-vcpkg_install_cmake()
-vcpkg_fixup_cmake_targets()
-
+vcpkg_install_meson()
+#vcpkg_fixup_cmake_targets()
+vcpkg_fixup_pkgconfig()
 vcpkg_copy_pdbs()
 
-if ("glib" IN_LIST FEATURES)
-    # Propagate dependency on glib downstream
-    file(READ "${CURRENT_PACKAGES_DIR}/share/harfbuzz/harfbuzzConfig.cmake" _contents)
-    file(WRITE "${CURRENT_PACKAGES_DIR}/share/harfbuzz/harfbuzzConfig.cmake" "
-include(CMakeFindDependencyMacro)
-find_dependency(unofficial-glib CONFIG)
-    
-${_contents}
-")
-endif()
 
 # Handle copyright
 file(INSTALL ${SOURCE_PATH}/COPYING DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
