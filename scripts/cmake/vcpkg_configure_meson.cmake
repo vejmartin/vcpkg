@@ -100,12 +100,13 @@ function(generate_native_file) #https://mesonbuild.com/Native-environments.html
 endfunction()
 
 function(generate_native_file_config _config) #https://mesonbuild.com/Native-environments.html
-
-    if(${_config} STREQUAL DEBUG)
-        set(LIBPATH_${_config} "'-L\"${CURRENT_INSTALLED_DIR}/debug/lib\"'")
+    if(VCPKG_TARGET_IS_WINDOWS)
+        set(L_FLAG /LIBPATH:)
     else()
-        set(LIBPATH_${_config} "'-L\"${CURRENT_INSTALLED_DIR}/lib\"'")
+        set(L_FLAG -L)
     endif()
+    set(PATH_SUFFIX_DEBUG /debug)
+    set(LIBPATH_${_config} "'${L_FLAG}${CURRENT_INSTALLED_DIR}${PATH_SUFFIX_${_config}}/lib'")
     
     set(NATIVE_${_config} "[properties]\n") #https://mesonbuild.com/Builtin-options.html
     string(REGEX REPLACE "( |^)(-|/)" ";\\2" MESON_CFLAGS_${_config} "${VCPKG_DETECTED_COMBINED_CFLAGS_${_config}}")
@@ -133,14 +134,11 @@ function(generate_native_file_config _config) #https://mesonbuild.com/Native-env
     string(REGEX REPLACE "( |^)(-|/)" ";\\2" LINKER_FLAGS_${_config} "${LINKER_FLAGS_${_config}}")
     list(TRANSFORM LINKER_FLAGS_${_config} APPEND "'")
     list(TRANSFORM LINKER_FLAGS_${_config} PREPEND "'")
-    if(VCPKG_TARGET_IS_WINDOWS AND VCPKG_LIBRARY_LINKAGE STREQUAL dynamic)
-        list(APPEND LINKER_FLAGS_${_config} "'-DLL'")
-    endif()
     list(APPEND LINKER_FLAGS_${_config} "${LIBPATH_${_config}}")
     list(JOIN LINKER_FLAGS_${_config} ", " LINKER_FLAGS_${_config})
     string(REPLACE "'', " "" LINKER_FLAGS_${_config} "${LINKER_FLAGS_${_config}}")
-    string(APPEND NATIVE_${_config} "c_linker_args = [${LINKER_FLAGS_${_config}}]\n")
-    string(APPEND NATIVE_${_config} "cpp_linker_args = [${LINKER_FLAGS_${_config}}]\n")
+    string(APPEND NATIVE_${_config} "c_link_args = [${LINKER_FLAGS_${_config}}]\n")
+    string(APPEND NATIVE_${_config} "cpp_link_args = [${LINKER_FLAGS_${_config}}]\n")
 
     string(APPEND NATIVE_${_config} "[built-in options]\n")
     if(VCPKG_TARGET_IS_WINDOWS)
@@ -259,7 +257,15 @@ function(generate_cross_file) #https://mesonbuild.com/Cross-compilation.html
 endfunction()
 
 function(generate_cross_file_config _config) #https://mesonbuild.com/Native-environments.html
-    
+    if(VCPKG_TARGET_IS_WINDOWS)
+        set(L_FLAG /LIBPATH:)
+    else()
+        set(L_FLAG -L)
+    endif()
+    set(PATH_SUFFIX_DEBUG /debug)
+    set(LIBPATH_${_config} "'${L_FLAG}${CURRENT_INSTALLED_DIR}${PATH_SUFFIX_${_config}}/lib'")
+
+
     set(NATIVE_${_config} "[properties]\n") #https://mesonbuild.com/Builtin-options.html
     string(REGEX REPLACE "( |^)(-|/)" ";\\2" MESON_CFLAGS_${_config} "${VCPKG_DETECTED_COMBINED_CFLAGS_${_config}}")
     list(TRANSFORM MESON_CFLAGS_${_config} APPEND "'")
@@ -271,7 +277,7 @@ function(generate_cross_file_config _config) #https://mesonbuild.com/Native-envi
     string(REGEX REPLACE "( |^)(-|/)" ";\\2" MESON_CXXFLAGS_${_config} "${VCPKG_DETECTED_COMBINED_CXXFLAGS_${_config}}")
     list(TRANSFORM MESON_CXXFLAGS_${_config} APPEND "'")
     list(TRANSFORM MESON_CXXFLAGS_${_config} PREPEND "'")
-     list(APPEND MESON_CXXFLAGS_${_config} "'-I\"${CURRENT_INSTALLED_DIR}/include\"'")
+    list(APPEND MESON_CXXFLAGS_${_config} "'-I\"${CURRENT_INSTALLED_DIR}/include\"'")
     list(JOIN MESON_CXXFLAGS_${_config} ", " MESON_CXXFLAGS_${_config})
     string(REPLACE "'', " "" MESON_CXXFLAGS_${_config} "${MESON_CXXFLAGS_${_config}}")
     string(APPEND NATIVE_${_config} "cpp_args = [${MESON_CXXFLAGS_${_config}}]\n")
@@ -284,13 +290,11 @@ function(generate_cross_file_config _config) #https://mesonbuild.com/Native-envi
     string(REGEX REPLACE "( |^)(-|/)" ";\\2" LINKER_FLAGS_${_config} "${LINKER_FLAGS_${_config}}")
     list(TRANSFORM LINKER_FLAGS_${_config} APPEND "'")
     list(TRANSFORM LINKER_FLAGS_${_config} PREPEND "'")
-    if(VCPKG_TARGET_IS_WINDOWS AND VCPKG_LIBRARY_LINKAGE STREQUAL dynamic)
-        list(APPEND LINKER_FLAGS_${_config} "'-DLL'")
-    endif()
+    list(APPEND LINKER_FLAGS_${_config} "${LIBPATH_${_config}}")
     list(JOIN LINKER_FLAGS_${_config} ", " LINKER_FLAGS_${_config})
     string(REPLACE "'', " "" LINKER_FLAGS_${_config} "${LINKER_FLAGS_${_config}}")
-    string(APPEND NATIVE_${_config} "c_linker_args = [${LINKER_FLAGS_${_config}}]\n")
-    string(APPEND NATIVE_${_config} "cpp_linker_args = [${LINKER_FLAGS_${_config}}]\n")
+    string(APPEND NATIVE_${_config} "c_link_args = [${LINKER_FLAGS_${_config}}]\n")
+    string(APPEND NATIVE_${_config} "cpp_link_args = [${LINKER_FLAGS_${_config}}]\n")
 
     string(APPEND NATIVE_${_config} "[built-in options]\n")
     if(VCPKG_TARGET_IS_WINDOWS)
@@ -428,17 +432,17 @@ function(vcpkg_configure_meson)
             set(ENV{PKG_CONFIG_PATH} "${PKGCONFIG_INSTALLED_DIR}${VCPKG_HOST_PATH_SEPARATOR}${PKGCONFIG_SHARE_DIR}")
         endif()
 
-        add_to_env(LIB "${CURRENT_INSTALLED_DIR}/${PATH_SUFFIX_${buildtype}}lib/")
-        add_to_env(LIBPATH "${CURRENT_INSTALLED_DIR}/${PATH_SUFFIX_${buildtype}}lib/")
-        add_to_env(LIBRARY_PATH "{CURRENT_INSTALLED_DIR}/${PATH_SUFFIX_${buildtype}}lib/")
+        #add_to_env(LIB "${CURRENT_INSTALLED_DIR}/${PATH_SUFFIX_${buildtype}}lib/")
+        #add_to_env(LIBPATH "${CURRENT_INSTALLED_DIR}/${PATH_SUFFIX_${buildtype}}lib/")
+        #add_to_env(LIBRARY_PATH "{CURRENT_INSTALLED_DIR}/${PATH_SUFFIX_${buildtype}}lib/")
         vcpkg_execute_required_process(
             COMMAND ${MESON} ${_vcm_OPTIONS} ${_vcm_OPTIONS_${buildtype}} ${_vcm_SOURCE_PATH}
             WORKING_DIRECTORY ${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-${SUFFIX_${buildtype}}
             LOGNAME config-${TARGET_TRIPLET}-${SUFFIX_${buildtype}}
         )
-        restore_env(LIB)
-        restore_env(LIBPATH)
-        restore_env(LIBRARY_PATH)
+        #restore_env(LIB)
+        #restore_env(LIBPATH)
+        #restore_env(LIBRARY_PATH)
         #Copy meson log files into buildtree for CI
         if(EXISTS "${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-${SUFFIX_${buildtype}}/meson-logs/meson-log.txt")
             file(COPY "${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-${SUFFIX_${buildtype}}/meson-logs/meson-log.txt" DESTINATION "${CURRENT_BUILDTREES_DIR}")
