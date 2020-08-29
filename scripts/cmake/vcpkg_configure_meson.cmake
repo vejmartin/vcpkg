@@ -327,6 +327,10 @@ function(vcpkg_configure_meson)
     debug_message("Including cmake vars from: ${CMAKE_VARS_FILE}")
     include("${CMAKE_VARS_FILE}")
 
+    if(APPLE AND NOT DEFINED ENV{SDKROOT})
+        set(ENV{SDKROOT} "${VCPKG_DETECTED_OSX_SYSROOT}")
+    endif()
+
     list(APPEND _vcm_OPTIONS --buildtype plain --backend ninja --wrap-mode nodownload)
 
     if(NOT VCPKG_MESON_NATIVE_FILE)
