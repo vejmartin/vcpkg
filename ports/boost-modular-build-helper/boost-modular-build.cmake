@@ -84,6 +84,15 @@ function(boost_modular_build)
         if(DEFINED _bm_BOOST_CMAKE_FRAGMENT)
             list(APPEND configure_option "-DBOOST_CMAKE_FRAGMENT=${_bm_BOOST_CMAKE_FRAGMENT}")
         endif()
+
+        if(NOT DEFINED $ENV{SDKROOT})
+            if(VCPKG_CMAKE_SYSTEM_NAME STREQUAL "iOS")
+                set(ENV{SDKROOT} "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk")
+            elseif(VCPKG_CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+                set(ENV{SDKROOT} "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk")
+            endif()
+        endif()
+
         vcpkg_configure_cmake(
             SOURCE_PATH ${BOOST_BUILD_INSTALLED_DIR}/share/boost-build
             PREFER_NINJA

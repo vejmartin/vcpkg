@@ -10,7 +10,17 @@ if "@VCPKG_PLATFORM_TOOLSET@" != "external"
 }
 else
 {
-    using gcc : 5.4.1 : @CMAKE_CXX_COMPILER@
+    if "@CMAKE_CXX_COMPILER_ID@" in "Clang" "AppleClang" 
+    {
+        compiler_name = "clang" ;
+        compiler_version = "@CMAKE_CXX_COMPILER_VERSION@" ;
+    }
+    else
+    {
+        compiler_name = "gcc" ;
+        compiler_version = "5.4.1" ;
+    }
+    using $(compiler_name) : $(compiler_version) : @CMAKE_CXX_COMPILER@
         :
         <ranlib>@CMAKE_RANLIB@
         <archiver>@CMAKE_AR@
