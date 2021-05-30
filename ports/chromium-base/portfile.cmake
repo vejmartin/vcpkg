@@ -23,33 +23,37 @@ function(checkout_in_path PATH URL REF)
     file(REMOVE_RECURSE "${DEP_SOURCE_PATH}")
 endfunction()
 
-# Commits are based on https://chromium.googlesource.com/chromium/src/+/refs/tags/86.0.4199.1
-set(SOURCE_PATH "${CURRENT_BUILDTREES_DIR}/src/25ce732")
+# Commits are based on https://chromium.googlesource.com/chromium/src/+/refs/tags/93.0.4527.1
+set(SOURCE_PATH "${CURRENT_BUILDTREES_DIR}/src/65424b3")
 file(MAKE_DIRECTORY "${SOURCE_PATH}/third_party")
 
 set(CHROMIUM_GIT "https://chromium.googlesource.com/chromium/src")
 checkout_in_path(
     "${SOURCE_PATH}/base" 
     "${CHROMIUM_GIT}/base" 
-    "25ce73258703a5ac018da0e203fb3d4a98c2136e"
+    "65424b398e1cedb38cc61af7c958c4e314d47333"
     res/0001-base.patch)
 checkout_in_path(
     "${SOURCE_PATH}/build" 
     "${CHROMIUM_GIT}/build" 
-    "312532ee66abdacbe58afb5df7ddf05e3a6399f9"
+    "3fc38c3bd66b81e05536f2f89879db8bbedd9cb4"
     res/0002-build.patch)
 checkout_in_path(
     "${SOURCE_PATH}/third_party/apple_apsl" 
     "${CHROMIUM_GIT}/third_party/apple_apsl" 
-    "4cc25bbf65194f6726f7f10da0a885818e35d53e")
+    "6c392aa25ba660e9f66b66f75bc678d8b15cbbf7")
 checkout_in_path(
     "${SOURCE_PATH}/third_party/ced" 
     "${CHROMIUM_GIT}/third_party/ced" 
-    "4cd87a44674edd9fe1f01c4cb5f1b73907ce4236")
+    "e8cd19c43f9d52c4065f0b258d607acfe892281f")
 checkout_in_path(
     "${SOURCE_PATH}/third_party/modp_b64" 
     "${CHROMIUM_GIT}/third_party/modp_b64" 
-    "509f005fa65e652dc4a6f636da6fa1002b6dce16")
+    "7b38a1f56b3bf3d06b337af75a2251f0489cd004")
+checkout_in_path(
+    "${SOURCE_PATH}/third_party/abseil-cpp" 
+    "${CHROMIUM_GIT}/third_party/abseil-cpp" 
+    "7949d870935409c5c195447bc23ad1bf3ff80c91")
 
 set(RES "${CMAKE_CURRENT_LIST_DIR}/res")
 file(COPY "${RES}/.gn" DESTINATION "${SOURCE_PATH}")
@@ -64,6 +68,7 @@ file(COPY "${RES}/libxml" DESTINATION "${SOURCE_PATH}/third_party")
 file(COPY "${RES}/protobuf" DESTINATION "${SOURCE_PATH}/third_party")
 file(COPY "${RES}/fontconfig" DESTINATION "${SOURCE_PATH}/third_party")
 file(COPY "${RES}/test_fonts" DESTINATION "${SOURCE_PATH}/third_party")
+file(COPY "${RES}/googletest" DESTINATION "${SOURCE_PATH}/third_party")
 
 set(OPTIONS "\
     use_custom_libcxx=false \
