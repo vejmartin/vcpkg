@@ -1,1 +1,3 @@
-component("test_scripts_shared") {}
+component("test_scripts_shared") {
+  output_name = "vcpkg_test_scripts_shared"
+}

@@ -1,16 +1,20 @@
 diff --git a/BUILD.gn b/BUILD.gn
-index 31548394c..a12f616c8 100644
+index 31548394c..1a920f85b 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
-@@ -149,6 +149,7 @@ config("perfetto_config") {
+@@ -149,6 +149,11 @@ config("perfetto_config") {
  # test code (test support and anything in the test directory) which should use
  # source_set as is recommended for GN targets).
  component("base") {
 +  output_name = "chromium_base"
++  if (!is_component_build) {
++    complete_static_lib = true
++    configs -= [ "//build/config/compiler:thin_archive" ]
++  }
    sources = [
      "allocator/allocator_check.cc",
      "allocator/allocator_check.h",
-@@ -1704,7 +1705,7 @@ component("base") {
+@@ -1704,7 +1709,7 @@ component("base") {
      "hash/md5_constexpr_internal.h",
      "hash/sha1.h",
    ]
@@ -19,7 +23,7 @@ index 31548394c..a12f616c8 100644
      sources += [
        "hash/md5_nacl.cc",
        "hash/md5_nacl.h",
-@@ -2469,6 +2470,7 @@ buildflag_header("profiler_buildflags") {
+@@ -2469,6 +2474,7 @@ buildflag_header("profiler_buildflags") {
  # library. Note that this library cannot depend on base because base depends on
  # base_static.
  static_library("base_static") {
@@ -27,7 +31,7 @@ index 31548394c..a12f616c8 100644
    sources = [
      "base_switches.cc",
      "base_switches.h",
-@@ -2498,7 +2500,7 @@ static_library("base_static") {
+@@ -2498,7 +2504,7 @@ static_library("base_static") {
  }
  
  component("i18n") {
@@ -36,6 +40,60 @@ index 31548394c..a12f616c8 100644
    sources = [
      "i18n/base_i18n_export.h",
      "i18n/base_i18n_switches.cc",
+diff --git a/bits.h b/bits.h
+index a139a719d..b5c1c58e8 100644
+--- a/bits.h
++++ b/bits.h
+@@ -79,7 +79,7 @@ inline T* AlignUp(T* ptr, size_t alignment) {
+ #if defined(COMPILER_MSVC)
+ 
+ template <typename T, unsigned bits = sizeof(T) * 8>
+-ALWAYS_INLINE
++ALWAYS_INLINE constexpr
+     typename std::enable_if<std::is_unsigned<T>::value && sizeof(T) <= 4,
+                             unsigned>::type
+     CountLeadingZeroBits(T x) {
+@@ -91,7 +91,7 @@ ALWAYS_INLINE
+ }
+ 
+ template <typename T, unsigned bits = sizeof(T) * 8>
+-ALWAYS_INLINE
++ALWAYS_INLINE constexpr
+     typename std::enable_if<std::is_unsigned<T>::value && sizeof(T) == 8,
+                             unsigned>::type
+     CountLeadingZeroBits(T x) {
+@@ -116,7 +116,7 @@ ALWAYS_INLINE
+ }
+ 
+ template <typename T, unsigned bits = sizeof(T) * 8>
+-ALWAYS_INLINE
++ALWAYS_INLINE constexpr
+     typename std::enable_if<std::is_unsigned<T>::value && sizeof(T) <= 4,
+                             unsigned>::type
+     CountTrailingZeroBits(T x) {
+@@ -127,7 +127,7 @@ ALWAYS_INLINE
+ }
+ 
+ template <typename T, unsigned bits = sizeof(T) * 8>
+-ALWAYS_INLINE
++ALWAYS_INLINE constexpr
+     typename std::enable_if<std::is_unsigned<T>::value && sizeof(T) == 8,
+                             unsigned>::type
+     CountTrailingZeroBits(T x) {
+@@ -150,11 +150,11 @@ ALWAYS_INLINE
+ #endif
+ }
+ 
+-ALWAYS_INLINE uint32_t CountLeadingZeroBits32(uint32_t x) {
++ALWAYS_INLINE constexpr uint32_t CountLeadingZeroBits32(uint32_t x) {
+   return CountLeadingZeroBits(x);
+ }
+ 
+-ALWAYS_INLINE uint64_t CountLeadingZeroBits64(uint64_t x) {
++ALWAYS_INLINE constexpr uint64_t CountLeadingZeroBits64(uint64_t x) {
+   return CountLeadingZeroBits(x);
+ }
+ 
 diff --git a/compiler_specific.h b/compiler_specific.h
 index 0e1140330..d615ff9c8 100644
 --- a/compiler_specific.h

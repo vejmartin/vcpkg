@@ -10,6 +10,34 @@ index 46bc47692..377e75fa8 100644
    }
  }
  
+diff --git a/config/apple/sdk_info.py b/config/apple/sdk_info.py
+index fea680101..6151065b9 100644
+--- a/config/apple/sdk_info.py
++++ b/config/apple/sdk_info.py
+@@ -76,12 +76,17 @@ def FillXcodeVersion(settings, developer_dir):
+     settings['xcode_version_int'] = int(settings['xcode_version'], 10)
+     settings['xcode_build'] = version_plist['ProductBuildVersion']
+     return
+-
+-  lines = subprocess.check_output(['xcodebuild',
+-                                   '-version']).decode('UTF-8').splitlines()
+-  settings['xcode_version'] = FormatVersion(lines[0].split()[-1])
+-  settings['xcode_version_int'] = int(settings['xcode_version'], 10)
+-  settings['xcode_build'] = lines[-1].split()[-1]
++  
++  try:
++    lines = subprocess.check_output(['xcodebuild',
++                                     '-version']).decode('UTF-8').splitlines()
++    settings['xcode_version'] = FormatVersion(lines[0].split()[-1])
++    settings['xcode_version_int'] = int(settings['xcode_version'], 10)
++    settings['xcode_build'] = lines[-1].split()[-1]
++  except:
++    settings['xcode_version'] = ""
++    settings['xcode_version_int'] = 0
++    settings['xcode_build'] = ""
+ 
+ 
+ def FillMachineOSBuild(settings):
 diff --git a/config/clang/BUILD.gn b/config/clang/BUILD.gn
 index 180e2e626..97fe21dc6 100644
 --- a/config/clang/BUILD.gn
@@ -24,7 +52,7 @@ index 180e2e626..97fe21dc6 100644
  }
  
 diff --git a/mac/find_sdk.py b/mac/find_sdk.py
-index d86f31093..6879976e8 100755
+index d86f31093..4474281f7 100755
 --- a/mac/find_sdk.py
 +++ b/mac/find_sdk.py
 @@ -68,6 +68,8 @@ def main():
@@ -36,6 +64,15 @@ index d86f31093..6879976e8 100755
  
    if not os.path.isdir(sdk_dir):
      raise SdkError('Install Xcode, launch it, accept the license ' +
+@@ -79,7 +81,7 @@ def main():
+           if parse_version(s) >= parse_version(min_sdk_version)]
+   if not sdks:
+     raise Exception('No %s+ SDK found' % min_sdk_version)
+-  best_sdk = sorted(sdks, key=parse_version)[0]
++  best_sdk = sorted(sdks, key=parse_version)[-1]
+ 
+   if options.print_sdk_path:
+     sdk_name = 'MacOSX' + best_sdk + '.sdk'
 @@ -87,7 +89,10 @@ def main():
  
    if options.print_bin_path:

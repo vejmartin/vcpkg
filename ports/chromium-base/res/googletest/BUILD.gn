@@ -1,2 +1,6 @@
-component("gtest") {}
-component("gmock") {}
+component("gtest") {
+  output_name = "vcpkg_gtest"
+}
+component("gmock") {
+  output_name = "vcpkg_gmock"
+}
